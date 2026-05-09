@@ -1,0 +1,28 @@
+{
+  "mode": "anger",
+  "num_samples": 62974,
+  "feature_dim": 16,
+  "label_rule": "0~1 weak, 2~3 normal, 4~5 strong",
+  "anger_aus": [
+    4,
+    17,
+    20,
+    25,
+    26
+  ],
+  "au_list": [
+    1,
+    2,
+    4,
+    5,
+    6,
+    9,
+    12,
+    15,
+    17,
+    20,
+    25,
+    26
+  ],
+  "note": "This dataset is for degree_AI only. It is separate from word/sen AIHub preprocessing."
+}
