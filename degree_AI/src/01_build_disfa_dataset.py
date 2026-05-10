@@ -11,6 +11,7 @@ import scipy.io as sio
 from tqdm import tqdm
 
 from degree_features import extract_degree_features_from_points
+from error_log_utils import load_disfa_error_ranges, is_error_frame
 
 
 AU_LIST = [1, 2, 4, 5, 6, 9, 12, 15, 17, 20, 25, 26]
@@ -222,6 +223,9 @@ def score_to_label(score: float) -> int:
 def build_dataset(raw_dir: Path, work_dir: Path, out_dir: Path, mode: str) -> None:
     action_dir, landmark_root = prepare_data(raw_dir, work_dir)
 
+    # Error_LOG_Sheet 기반 이상 프레임 구간 로드
+    error_ranges = load_disfa_error_ranges(raw_dir)
+
     subject_dirs = find_subject_landmark_dirs(landmark_root)
 
     if not subject_dirs:
@@ -234,6 +238,9 @@ def build_dataset(raw_dir: Path, work_dir: Path, out_dir: Path, mode: str) -> No
     y = []
     rows = []
     errors = []
+
+    removed_by_error_log = 0
+    skipped_no_au = 0
 
     for subject, subject_dir in subject_dirs.items():
         print(f"\nProcessing subject: {subject}")
@@ -263,7 +270,13 @@ def build_dataset(raw_dir: Path, work_dir: Path, out_dir: Path, mode: str) -> No
             if frame is None:
                 continue
 
+            # Error_LOG_Sheet에 기록된 오류 프레임 제거
+            if is_error_frame(error_ranges, subject, frame):
+                removed_by_error_log += 1
+                continue
+
             if frame not in au_by_frame:
+                skipped_no_au += 1
                 continue
 
             try:
@@ -325,7 +338,8 @@ def build_dataset(raw_dir: Path, work_dir: Path, out_dir: Path, mode: str) -> No
         "mode": mode,
         "feature_type": "common_face_degree_features",
         "feature_dim": int(X.shape[1]),
-        "source": "DISFA Landmark_Points + ActionUnit_Labels"
+        "source": "DISFA Landmark_Points + ActionUnit_Labels",
+        "error_log_sheet_used": True
     }
 
     with open(out_dir / f"label_map_{mode}.json", "w", encoding="utf-8") as f:
@@ -338,6 +352,9 @@ def build_dataset(raw_dir: Path, work_dir: Path, out_dir: Path, mode: str) -> No
         "label_rule": "0~1 weak, 2~3 normal, 4~5 strong",
         "anger_aus": ANGER_AUS,
         "au_list": AU_LIST,
+        "error_log_sheet_used": True,
+        "removed_by_error_log": int(removed_by_error_log),
+        "skipped_no_au": int(skipped_no_au),
         "note": "This dataset is for degree_AI only. It is separate from word/sen AIHub preprocessing."
     }
 
@@ -349,6 +366,8 @@ def build_dataset(raw_dir: Path, work_dir: Path, out_dir: Path, mode: str) -> No
     print("\n[DONE] DISFA degree dataset created.")
     print(f"X shape: {X.shape}")
     print(f"y shape: {y.shape}")
+    print(f"Removed by Error_LOG_Sheet: {removed_by_error_log}")
+    print(f"Skipped no AU frame: {skipped_no_au}")
     print("\nLabel counts:")
     print(meta_df["label_name"].value_counts())
     print(f"\nSaved to: {out_dir}")
