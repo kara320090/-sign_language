@@ -1,27 +1,36 @@
 .venv/
 __pycache__/
+*.pyc
 
-data/raw/*
-data/work/*
-data/processed/*
-models/*
+degree_AI/data/raw/*
+degree_AI/data/work/*
+degree_AI/data/processed/*
+degree_AI/models/*
+degree_AI/results/*
+degree_AI/outputs/*
 
-!data/raw/.gitkeep
-!data/work/.gitkeep
-!data/processed/.gitkeep
-!models/.gitkeep
+!degree_AI/data/raw/.gitkeep
+!degree_AI/data/work/.gitkeep
+!degree_AI/data/processed/.gitkeep
+!degree_AI/models/.gitkeep
 
-*.zip
-*.rar
+*.npy
+*.npz
+*.joblib
 *.pkl
 *.h5
 *.keras
 *.pt
 *.pth
+*.onnx
+
+*.zip
+*.rar
+*.7z
 *.mat
 *.xls
 *.xlsx
 *.mp4
 *.wmv
 *.pdf
-*.txt
+*.log
