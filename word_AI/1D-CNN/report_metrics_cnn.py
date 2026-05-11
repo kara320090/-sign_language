@@ -26,20 +26,11 @@ def load_model(model_path: Path):
     tf = ensure_tensorflow()
     if not model_path.exists():
         raise FileNotFoundError(f"Model file not found: {model_path}")
-    return tf.keras.models.load_model(model_path)
+    # Report step only needs inference; compile=False avoids custom loss deserialization issues.
+    return tf.keras.models.load_model(model_path, compile=False)
 
 
-def final_judgement(acc: float, latency_ms: float) -> str:
-    """Generate final judgement based on accuracy and latency metrics.
-    
-    This reflects the 126D 'Hands Only' optimization using core feature indices.
-    Accuracy recovery is the primary focus after feature refinement.
-    """
-    if acc >= 0.80:
-        return "분석된 핵심 인덱스 126개 적용으로 성능 회복 성공 (실시간 시연 준비)"
-    if acc >= 0.60:
-        return "분석된 핵심 인덱스 126개 적용으로 4.73% 정체 구간 돌파 및 성능 회복 중"
-    return "특징점 추출 로직 재검토 권장"
+# Automatic judgement removed — decisions should be recorded externally when comparing models.
 
 
 def run_report(data_dir: Path, model_path: Path, output_path: Path, seed: int = CNN_SEED) -> None:
@@ -47,15 +38,12 @@ def run_report(data_dir: Path, model_path: Path, output_path: Path, seed: int = 
     model = load_model(model_path)
     seq_len, feature_dim = tuple(model.input_shape[1:])
     
-    # Load dataset with feature_indices matching model's input shape
+    # Match feature slicing to model input dimension.
+    # 126D uses curated core indices, others use the first N features.
     if feature_dim == 126:
-        # Use core_indices for 126D "Hands Only"
         feature_indices = load_core_indices()
-    elif feature_dim == 216:
-        # Use first 216 features for baseline
-        feature_indices = np.arange(216, dtype=np.int32)
     else:
-        raise ValueError(f"Unsupported feature dimension: {feature_dim}. Expected 126 or 216.")
+        feature_indices = np.arange(feature_dim, dtype=np.int32)
     
     bundle = load_cnn_dataset(data_dir, feature_indices=feature_indices)
     X = bundle.X
@@ -84,6 +72,8 @@ def run_report(data_dir: Path, model_path: Path, output_path: Path, seed: int = 
     input_structure = f"30F × {feature_dim}D"
     if feature_dim == 126:
         input_structure += " (Hands Only)"
+    elif feature_dim == 201:
+        input_structure += " (Body+Hands)"
     elif feature_dim == 216:
         input_structure += " (Baseline)"
     
@@ -93,7 +83,6 @@ def run_report(data_dir: Path, model_path: Path, output_path: Path, seed: int = 
         "Accuracy": round(acc, 4),
         "Macro F1": round(macro_f1, 4),
         "Weighted F1": round(weighted_f1, 4),
-        "최종 판단": final_judgement(acc, latency_ms),
     }
 
     table = pd.DataFrame([row])

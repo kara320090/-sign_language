@@ -43,12 +43,7 @@ def load_model(model_path: Path):
     return tf.keras.models.load_model(model_path)
 
 
-def make_final_judgement(acc: float) -> str:
-    if acc > 0.8:
-        return "시연 가능 수준의 높은 정확도"
-    if 0.6 < acc < 0.8:
-        return "정확도 보완 필요 (과적합 의심)"
-    return "사용 비추천 및 아키텍처 재설계 필요"
+# Automatic judgement removed — keep reports neutral for external comparison.
 
 
 def get_latency_ms(result_dir: Path) -> float | None:
@@ -115,7 +110,6 @@ def build_table_row(
         "Strong Precision": round(strong_precision, 4),
         "Strong Recall": round(strong_recall, 4),
         "Strong F1": round(strong_f1, 4),
-        "판단": make_final_judgement(acc),
     }
 
 

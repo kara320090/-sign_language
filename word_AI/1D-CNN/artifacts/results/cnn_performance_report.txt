@@ -1,7 +1,7 @@
 [1D-CNN 성능 검증 결과 표]
                 입력 구조              모델  Accuracy  Macro F1  Weighted F1            최종 판단
-30F × 216D (Baseline) 1D-CNN Baseline    0.2278     0.195       0.1952 특징점 추출 로직 재검토 권장
+30F × 216D (Baseline) 1D-CNN Baseline    0.2382    0.2032       0.2032 특징점 추출 로직 재검토 권장
 
 Validation samples: 9600
 Classes: 3000
-Average latency(ms): 42.36
+Average latency(ms): 36.98

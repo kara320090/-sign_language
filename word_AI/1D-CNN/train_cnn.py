@@ -7,6 +7,7 @@ import os
 import random
 import sys
 from pathlib import Path
+from typing import Literal
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -27,6 +28,7 @@ from cnn_common import (  # noqa: E402
     CNN_REDUCE_PATIENCE,
     CNN_SEED,
     build_cnn_datasets,
+    load_core_indices,
     load_cnn_dataset,
     safe_stratified_split,
     save_cnn_json,
@@ -38,6 +40,8 @@ tf = ensure_tensorflow()
 
 
 DEFAULT_WARMUP_EPOCHS = 0
+FeatureProfile = Literal["baseline216", "body_hands201", "hands126", "core126"]
+LossMode = Literal["sparse", "focal"]
 
 
 def set_global_seed(seed: int) -> None:
@@ -85,7 +89,60 @@ def prepare_eval_item(sequence, label, num_classes: int):
     return sequence, label
 
 
-def build_cnn_model(input_shape: tuple[int, int], num_classes: int):
+def resolve_profile_indices(profile: FeatureProfile | None) -> list[int] | None:
+    if profile is None:
+        return None
+    if profile == "baseline216":
+        return list(range(216))
+    if profile == "body_hands201":
+        return list(range(201))
+    if profile == "hands126":
+        return list(range(75, 201))
+    if profile == "core126":
+        return load_core_indices().astype(int).tolist()
+    raise ValueError(f"Unsupported feature profile: {profile}")
+
+
+def build_loss(
+    loss_mode: LossMode,
+    focal_gamma: float,
+    focal_alpha: float,
+    label_smoothing: float,
+):
+    tf = ensure_tensorflow()
+    if loss_mode == "sparse":
+        if label_smoothing > 0.0:
+            print("Warning: label_smoothing is not supported in this TF build for sparse CE. Ignoring it.")
+        return tf.keras.losses.SparseCategoricalCrossentropy()
+
+    def sparse_focal_loss(y_true, y_pred):
+        y_true_int = tf.cast(tf.reshape(y_true, [-1]), tf.int32)
+        y_true_oh = tf.one_hot(y_true_int, depth=tf.shape(y_pred)[-1], dtype=tf.float32)
+        y_pred_clipped = tf.clip_by_value(y_pred, 1e-7, 1.0 - 1e-7)
+        ce = -tf.reduce_sum(y_true_oh * tf.math.log(y_pred_clipped), axis=-1)
+        pt = tf.reduce_sum(y_true_oh * y_pred_clipped, axis=-1)
+        focal_term = tf.pow(1.0 - pt, focal_gamma)
+        loss = focal_alpha * focal_term * ce
+        return tf.reduce_mean(loss)
+
+    return sparse_focal_loss
+
+
+def compute_class_weight(y_train: np.ndarray, power: float = 0.5) -> dict[int, float]:
+    classes, counts = np.unique(y_train, return_counts=True)
+    inv = 1.0 / np.power(counts.astype(np.float64), power)
+    inv = inv / np.mean(inv)
+    return {int(c): float(w) for c, w in zip(classes, inv)}
+
+
+def build_cnn_model(
+    input_shape: tuple[int, int],
+    num_classes: int,
+    loss_mode: LossMode = "sparse",
+    focal_gamma: float = 2.0,
+    focal_alpha: float = 0.25,
+    label_smoothing: float = 0.0,
+):
     tf = ensure_tensorflow()
 
     inputs = tf.keras.Input(shape=input_shape, name="word_sequence")
@@ -110,9 +167,15 @@ def build_cnn_model(input_shape: tuple[int, int], num_classes: int):
     outputs = tf.keras.layers.Dense(num_classes, activation="softmax", name="classifier")(x)
 
     model = tf.keras.Model(inputs=inputs, outputs=outputs, name="word_1dcnn_classifier")
+    loss_obj = build_loss(
+        loss_mode=loss_mode,
+        focal_gamma=focal_gamma,
+        focal_alpha=focal_alpha,
+        label_smoothing=label_smoothing,
+    )
     model.compile(
         optimizer=tf.keras.optimizers.Adam(learning_rate=CNN_LR),
-        loss="sparse_categorical_crossentropy",  # Changed from categorical_crossentropy
+        loss=loss_obj,
         metrics=[
             tf.keras.metrics.SparseCategoricalAccuracy(name="accuracy"),
             tf.keras.metrics.SparseTopKCategoricalAccuracy(k=5, name="top5_accuracy"),
@@ -187,11 +250,23 @@ def train_cnn(
     batch_size: int = CNN_BATCH_SIZE,
     epochs: int = CNN_EPOCHS,
     feature_indices: list[int] | None = None,
+    feature_profile: FeatureProfile | None = None,
+    loss_mode: LossMode = "sparse",
+    focal_gamma: float = 2.0,
+    focal_alpha: float = 0.25,
+    label_smoothing: float = 0.0,
+    use_class_weight: bool = False,
+    class_weight_power: float = 0.5,
     max_samples: int | None = None,
+    run_name: str | None = None,
 ):
     set_global_seed(seed)
 
-    bundle = load_cnn_dataset(data_dir, feature_indices=feature_indices)
+    selected_indices = feature_indices
+    if selected_indices is None:
+        selected_indices = resolve_profile_indices(feature_profile)
+
+    bundle = load_cnn_dataset(data_dir, feature_indices=selected_indices)
     X = bundle.X
     y = bundle.y
 
@@ -211,12 +286,26 @@ def train_cnn(
         seed=seed,
     )
 
-    model = build_cnn_model(input_shape=(bundle.seq_len, X.shape[-1]), num_classes=bundle.num_classes)
+    model = build_cnn_model(
+        input_shape=(bundle.seq_len, X.shape[-1]),
+        num_classes=bundle.num_classes,
+        loss_mode=loss_mode,
+        focal_gamma=focal_gamma,
+        focal_alpha=focal_alpha,
+        label_smoothing=label_smoothing,
+    )
 
-    model_dir = get_model_dir()
-    result_dir = get_result_dir()
+    model_dir_base = get_model_dir()
+    result_dir_base = get_result_dir()
+    model_dir = model_dir_base / run_name if run_name else model_dir_base
+    result_dir = result_dir_base / run_name if run_name else result_dir_base
     model_dir.mkdir(parents=True, exist_ok=True)
     result_dir.mkdir(parents=True, exist_ok=True)
+
+    class_weight = None
+    if use_class_weight:
+        class_weight = compute_class_weight(y_train, power=class_weight_power)
+        print(f"Using class_weight with {len(class_weight)} classes (power={class_weight_power})")
 
     tf = ensure_tensorflow()
     lr_recorder = LearningRateRecorder()
@@ -252,6 +341,7 @@ def train_cnn(
         validation_data=val_ds,
         epochs=epochs,
         callbacks=callbacks,
+        class_weight=class_weight,
         verbose=1,
     )
 
@@ -275,7 +365,15 @@ def train_cnn(
         "batch_size": int(batch_size),
         "epochs": int(epochs),
         "seed": int(seed),
-        "feature_indices": feature_indices,
+        "feature_profile": feature_profile,
+        "feature_indices": selected_indices,
+        "loss_mode": loss_mode,
+        "focal_gamma": float(focal_gamma),
+        "focal_alpha": float(focal_alpha),
+        "label_smoothing": float(label_smoothing),
+        "use_class_weight": bool(use_class_weight),
+        "class_weight_power": float(class_weight_power),
+        "run_name": run_name,
         "max_samples": int(max_samples) if max_samples else None,
     }
     save_cnn_summary(result_dir / "training_summary_cnn.json", **summary)
@@ -309,10 +407,39 @@ def parse_args():
         help="Comma-separated feature indices. Omit to use GRU-consistent full channels.",
     )
     parser.add_argument(
+        "--feature_profile",
+        type=str,
+        default="baseline216",
+        choices=["baseline216", "body_hands201", "hands126", "core126"],
+        help="Predefined feature profile. Ignored when --feature_indices is provided.",
+    )
+    parser.add_argument(
+        "--loss_mode",
+        type=str,
+        default="sparse",
+        choices=["sparse", "focal"],
+        help="Loss mode: sparse cross-entropy or focal loss.",
+    )
+    parser.add_argument("--focal_gamma", type=float, default=2.0)
+    parser.add_argument("--focal_alpha", type=float, default=0.25)
+    parser.add_argument("--label_smoothing", type=float, default=0.0)
+    parser.add_argument(
+        "--use_class_weight",
+        action="store_true",
+        help="Apply inverse-frequency class weighting.",
+    )
+    parser.add_argument("--class_weight_power", type=float, default=0.5)
+    parser.add_argument(
         "--max_samples",
         type=int,
         default=None,
         help="Optional cap for quick smoke tests.",
+    )
+    parser.add_argument(
+        "--run_name",
+        type=str,
+        default=None,
+        help="Optional subfolder name under artifacts/models and artifacts/results.",
     )
     return parser.parse_args()
 
@@ -325,7 +452,15 @@ def main():
         batch_size=args.batch_size,
         epochs=args.epochs,
         feature_indices=parse_feature_indices(args.feature_indices),
+        feature_profile=args.feature_profile,
+        loss_mode=args.loss_mode,
+        focal_gamma=args.focal_gamma,
+        focal_alpha=args.focal_alpha,
+        label_smoothing=args.label_smoothing,
+        use_class_weight=args.use_class_weight,
+        class_weight_power=args.class_weight_power,
         max_samples=args.max_samples,
+        run_name=args.run_name,
     )
 
 

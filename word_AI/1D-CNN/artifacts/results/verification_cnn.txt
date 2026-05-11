@@ -5,15 +5,15 @@ Model path: C:\선문대학교\강의\3학년\1학기\전공\SW프로젝트기�
 Data path : C:\선문대학교\강의\3학년\1학기\전공\SW프로젝트기초\4. 팀플\9주차\전처리 완료 데이터(단어)
 
 IO check  : {'model_input_shape': [30, 216], 'data_input_shape': [30, 216], 'passes': True, 'spec': '30F × 216D (Baseline 216D)'}
-One-sample confidence check: {'max_probability': 0.07837061583995819, 'top_probability': 0.07837061583995819, 'prediction_label': 'Unknown', 'over_confidence': False, 'threshold': 0.7, 'top_class': 980}
+One-sample confidence check: {'max_probability': 0.10189966857433319, 'top_probability': 0.10189966857433319, 'prediction_label': 'Unknown', 'over_confidence': False, 'threshold': 0.7, 'top_class': 980}
 
-CPU latency benchmark (200 runs): {'repeats': 200, 'average_latency_ms': 38.94081250036834, 'min_latency_ms': 35.10489995824173, 'max_latency_ms': 124.92860003840178, 'p50_latency_ms': 37.58940001716837, 'p99_latency_ms': 59.8044250189559, 'target_latency_ms': 30.0, 'pass_target': False, 'note': '126D input should meet 30ms target (improved from 216D baseline)'}
+CPU latency benchmark (200 runs): {'repeats': 200, 'average_latency_ms': 36.24220000230707, 'min_latency_ms': 34.13280000677332, 'max_latency_ms': 46.77519999677315, 'p50_latency_ms': 36.00490000098944, 'p99_latency_ms': 40.657961996621395, 'target_latency_ms': 30.0, 'pass_target': False, 'note': '126D input should meet 30ms target (improved from 216D baseline)'}
 GPU latency benchmark (200 runs): None
-P99 latency benchmark (1000 runs, CPU): {'repeats': 1000, 'average_latency_ms': 39.59116769791581, 'min_latency_ms': 34.17050000280142, 'max_latency_ms': 74.90740000503138, 'p50_latency_ms': 38.42615001485683, 'p99_latency_ms': 59.036364049534306, 'target_latency_ms': 30.0, 'pass_target': False, 'note': '126D input should meet 30ms target (improved from 216D baseline)'}
+P99 latency benchmark (1000 runs, CPU): {'repeats': 1000, 'average_latency_ms': 36.62918489979347, 'min_latency_ms': 33.442200045101345, 'max_latency_ms': 52.27879999438301, 'p50_latency_ms': 36.394900002051145, 'p99_latency_ms': 43.82428203069139, 'target_latency_ms': 30.0, 'pass_target': False, 'note': '126D input should meet 30ms target (improved from 216D baseline)'}
 
 Sample predictions (for GRU comparison):
-- #1 idx=0 -> WORD0981 (class=980, conf=0.0784)
-- #2 idx=11999 -> WORD3000 (class=2999, conf=0.3481)
-- #3 idx=23999 -> WORD0150 (class=149, conf=0.1406)
-- #4 idx=35999 -> WORD0293 (class=292, conf=0.1069)
-- #5 idx=47999 -> WORD0301 (class=300, conf=0.1153)
+- #1 idx=0 -> WORD0981 (class=980, conf=0.1019)
+- #2 idx=11999 -> WORD3000 (class=2999, conf=0.3666)
+- #3 idx=23999 -> WORD0150 (class=149, conf=0.1180)
+- #4 idx=35999 -> WORD2573 (class=2572, conf=0.0905)
+- #5 idx=47999 -> WORD0301 (class=300, conf=0.1413)

@@ -2,15 +2,15 @@
   "table_row": {
     "입력 구조": "30F × 216D (Baseline)",
     "모델": "1D-CNN Baseline",
-    "Accuracy": 0.2278,
-    "Macro F1": 0.195,
-    "Weighted F1": 0.1952,
+    "Accuracy": 0.2382,
+    "Macro F1": 0.2032,
+    "Weighted F1": 0.2032,
     "최종 판단": "특징점 추출 로직 재검토 권장"
   },
   "validation_size": 9600,
   "num_classes": 3000,
   "model_path": "C:\\선문대학교\\강의\\3학년\\1학기\\전공\\SW프로젝트기초\\4. 팀플\\9주차\\99. 깃헙 코드 -sign_language\\word_AI\\1D-CNN\\artifacts\\models\\best_cnn_model.keras",
   "data_dir": "C:\\선문대학교\\강의\\3학년\\1학기\\전공\\SW프로젝트기초\\4. 팀플\\9주차\\전처리 완료 데이터(단어)",
-  "latency_ms": 42.35729932785034,
+  "latency_ms": 36.98376417160034,
   "seed": 42
 }
