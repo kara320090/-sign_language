@@ -1,0 +1,13 @@
+[성능 검증 결과 표]
+     입력 구조                   모델  Accuracy  Macro F1  Weighted F1  Top-1 Accuracy  Strong Precision  Strong Recall  Strong F1
+30F × 126D Final_GRU_HANDS_126D     0.833    0.8264       0.8255           0.833               1.0            1.0        1.0
+
+평균 추론 속도: 39.52 ms
+
+[혼동되는 단어군 Top-2]
+1. WORD0190 -> WORD2195 (오분류 4회)
+2. WORD1782 -> WORD1905 (오분류 4회)
+
+[추가 요약]
+Validation samples: 9600
+Classes: 3000

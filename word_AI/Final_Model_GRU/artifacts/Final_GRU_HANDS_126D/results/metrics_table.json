@@ -1,0 +1,34 @@
+{
+  "table_row": {
+    "입력 구조": "30F × 126D",
+    "모델": "Final_GRU_HANDS_126D",
+    "Accuracy": 0.833,
+    "Macro F1": 0.8264,
+    "Weighted F1": 0.8255,
+    "Top-1 Accuracy": 0.833,
+    "Strong Precision": 1.0,
+    "Strong Recall": 1.0,
+    "Strong F1": 1.0
+  },
+  "latency_ms": 39.51613299999735,
+  "top_confusions": [
+    {
+      "true_idx": 189,
+      "pred_idx": 2194,
+      "true_label": "WORD0190",
+      "pred_label": "WORD2195",
+      "count": 4
+    },
+    {
+      "true_idx": 1781,
+      "pred_idx": 1904,
+      "true_label": "WORD1782",
+      "pred_label": "WORD1905",
+      "count": 4
+    }
+  ],
+  "validation_size": 9600,
+  "num_classes": 3000,
+  "model_path": "C:\\선문대학교\\강의\\3학년\\1학기\\전공\\SW프로젝트기초\\4. 팀플\\9주차\\99. 깃헙 코드 -sign_language\\word_AI\\Final_Model_GRU\\artifacts\\Final_GRU_HANDS_126D\\models\\best_model.keras",
+  "data_dir": "C:\\선문대학교\\강의\\3학년\\1학기\\전공\\SW프로젝트기초\\4. 팀플\\9주차\\전처리 완료 데이터(단어)"
+}

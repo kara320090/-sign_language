@@ -1,5 +1,5 @@
 {
-  "run_name": "EXP_03_GRU_FULL_411D",
-  "resume": false,
-  "feature_profile": "full"
+  "run_name": "Final_GRU_HANDS_126D",
+  "resume": true,
+  "feature_profile": "hands"
 }

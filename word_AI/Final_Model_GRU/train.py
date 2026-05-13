@@ -180,8 +180,17 @@ def train_gru(data_dir: Path, seed: int = DEFAULT_SEED, batch_size: int = 256,
     if resume and best_model_path.exists():
         print(f"\n[Resuming] Loading existing model: {best_model_path}")
         model = tf.keras.models.load_model(best_model_path)
-        # 이어학습 시 기존 학습률의 50%만 사용하여 미세 조정
-        tf.keras.backend.set_value(model.optimizer.lr, DEFAULT_LEARNING_RATE * 0.5)
+            
+        # [수정] 버전 호환성을 고려한 학습률(Learning Rate) 조정 로직
+        new_lr = DEFAULT_LEARNING_RATE * 0.5
+            
+        # Keras 버전에 따라 속성명이 다를 수 있으므로 안전하게 처리
+        if hasattr(model.optimizer, 'learning_rate'):
+            model.optimizer.learning_rate.assign(new_lr)
+        else:
+            tf.keras.backend.set_value(model.optimizer.lr, new_lr)
+                
+        print(f"[Status] Learning rate adjusted to: {new_lr}")
     else:
         print(f"\n[Fresh Start] Building new model with input_dim: {X.shape[-1]}")
         model = build_gru_model(input_shape=(bundle.seq_len, X.shape[-1]), num_classes=bundle.num_classes)

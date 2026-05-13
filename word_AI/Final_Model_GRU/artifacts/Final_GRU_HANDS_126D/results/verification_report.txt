@@ -1,0 +1,16 @@
+Word GRU Verification Report
+============================================================
+
+Model path: C:\선문대학교\강의\3학년\1학기\전공\SW프로젝트기초\4. 팀플\9주차\99. 깃헙 코드 -sign_language\word_AI\Final_Model_GRU\artifacts\Final_GRU_HANDS_126D\models\best_model.keras
+Input shape: [30, 126]
+
+Dummy input check: {'dummy_input_shape': [1, 30, 126], 'prediction_shape': [1, 3000], 'passes': True}
+
+Top-3 report: {'top_k': [{'rank': 1, 'class_idx': 0, 'label': 'WORD0001', 'probability': 0.8810086846351624}, {'rank': 2, 'class_idx': 1, 'label': 'WORD0002', 'probability': 0.03159207105636597}, {'rank': 3, 'class_idx': 2331, 'label': 'WORD2332', 'probability': 0.023001085966825485}], 'max_probability': 0.8810086846351624, 'decision': 'WORD0001'}
+
+Label mapping checks: [{'sample_index': 0, 'label_idx': 0, 'label_name': 'WORD0001', 'matches_mapping': True}, {'sample_index': 5333, 'label_idx': 2333, 'label_name': 'WORD2334', 'matches_mapping': True}, {'sample_index': 10666, 'label_idx': 1666, 'label_name': 'WORD1667', 'matches_mapping': True}, {'sample_index': 15999, 'label_idx': 999, 'label_name': 'WORD1000', 'matches_mapping': True}, {'sample_index': 21332, 'label_idx': 332, 'label_name': 'WORD0333', 'matches_mapping': True}, {'sample_index': 26666, 'label_idx': 2666, 'label_name': 'WORD2667', 'matches_mapping': True}, {'sample_index': 31999, 'label_idx': 1999, 'label_name': 'WORD2000', 'matches_mapping': True}, {'sample_index': 37332, 'label_idx': 1332, 'label_name': 'WORD1333', 'matches_mapping': True}, {'sample_index': 42665, 'label_idx': 665, 'label_name': 'WORD0666', 'matches_mapping': True}, {'sample_index': 47999, 'label_idx': 2999, 'label_name': 'WORD3000', 'matches_mapping': True}]
+
+Latency: {'repeats': 200, 'average_latency_ms': 39.51613299999735, 'pass_40ms_target': True}
+
+Process memory (MB): nan
+GPU memory (MB): {}

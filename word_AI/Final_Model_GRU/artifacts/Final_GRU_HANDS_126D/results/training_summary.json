@@ -1,0 +1,25 @@
+{
+  "data_dir": "C:\\선문대학교\\강의\\3학년\\1학기\\전공\\SW프로젝트기초\\4. 팀플\\9주차\\전처리 완료 데이터(단어)",
+  "seq_len": 30,
+  "feature_dim": 126,
+  "num_classes": 3000,
+  "train_size": 38400,
+  "val_size": 9600,
+  "best_model_path": "C:\\선문대학교\\강의\\3학년\\1학기\\전공\\SW프로젝트기초\\4. 팀플\\9주차\\99. 깃헙 코드 -sign_language\\word_AI\\Final_Model_GRU\\artifacts\\Final_GRU_HANDS_126D\\models\\best_model.keras",
+  "final_model_path": "C:\\선문대학교\\강의\\3학년\\1학기\\전공\\SW프로젝트기초\\4. 팀플\\9주차\\99. 깃헙 코드 -sign_language\\word_AI\\Final_Model_GRU\\artifacts\\Final_GRU_HANDS_126D\\models\\final_model.keras",
+  "overfit_epoch": 2,
+  "overfit_message": "validation loss started to deteriorate around epoch 2",
+  "label_count": 3000,
+  "meta": {
+    "seq_len": 30,
+    "use_face": true,
+    "front_only": true,
+    "train_mode": "full",
+    "use_all_labels": true,
+    "top_n_labels": null,
+    "source_info": {
+      "mode": "folder",
+      "folder": "C:\\Users\\USER\\Desktop\\대학교\\26-1학기\\SW프로젝트기초\\과제\\03-1 최종 프로젝트 데이터\\real_word 데이터\\extracted_keypoints_front"
+    }
+  }
+}
