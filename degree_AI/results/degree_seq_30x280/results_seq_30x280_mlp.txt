@@ -1,0 +1,30 @@
+Classification Report
+              precision    recall  f1-score   support
+
+        weak       0.89      0.28      0.43      1009
+      normal       0.22      0.84      0.35       278
+      strong       0.84      0.44      0.57       151
+
+    accuracy                           0.41      1438
+   macro avg       0.65      0.52      0.45      1438
+weighted avg       0.75      0.41      0.43      1438
+
+
+Confusion Matrix
+[[287 722   0]
+ [ 32 233  13]
+ [  4  81  66]]
+
+Metrics
+{
+  "mode": "anger",
+  "model_type": "mlp",
+  "input_shape": "30x280",
+  "flattened_dim": 8400,
+  "accuracy": 0.40751043115438107,
+  "macro_f1": 0.45316209598520496,
+  "weighted_f1": 0.4311966217249181,
+  "strong_precision": 0.8354430379746836,
+  "strong_recall": 0.4370860927152318,
+  "strong_f1": 0.5739130434782609
+}

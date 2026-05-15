@@ -1,0 +1,2 @@
+﻿mode,model_type,input_shape,feature_dim,accuracy,macro_f1,weighted_f1,strong_precision,strong_recall,strong_f1
+anger,mlp,1x280,280,0.42151504669664475,0.491231925318121,0.4798979793102294,0.7306317044100119,0.6758544652701213,0.702176403207331

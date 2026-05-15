@@ -1,0 +1,12 @@
+{
+  "mode": "anger",
+  "model_type": "mlp",
+  "input_shape": "1x280",
+  "feature_dim": 280,
+  "accuracy": 0.42151504669664475,
+  "macro_f1": 0.491231925318121,
+  "weighted_f1": 0.4798979793102294,
+  "strong_precision": 0.7306317044100119,
+  "strong_recall": 0.6758544652701213,
+  "strong_f1": 0.702176403207331
+}

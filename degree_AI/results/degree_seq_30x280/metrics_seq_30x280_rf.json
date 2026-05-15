@@ -1,0 +1,12 @@
+{
+  "mode": "anger",
+  "model_type": "rf",
+  "input_shape": "30x280",
+  "flattened_dim": 8400,
+  "accuracy": 0.260778859527121,
+  "macro_f1": 0.18943760972401721,
+  "weighted_f1": 0.21194088896344815,
+  "strong_precision": 0.5,
+  "strong_recall": 0.019867549668874173,
+  "strong_f1": 0.03821656050955414
+}
