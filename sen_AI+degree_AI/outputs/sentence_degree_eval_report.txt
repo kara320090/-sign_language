@@ -1,0 +1,25 @@
+문장-degree 후처리 검증 리포트
+================================
+
+총 테스트 케이스: 30
+PASS: 30
+FAIL: 0
+
+후처리 정확도: 1.0000
+Ollama 최종 채택률: 0.9000
+Rule Guard 안전 보정률: 0.1000
+Fallback 사용률: 0.0000
+Rule 처리율: 0.0000
+평균 지연시간(ms): 3007.08
+
+Source 분포:
+{
+  "ollama": 27,
+  "rule_guard": 3
+}
+
+생성 파일:
+- C:\Users\soma\Desktop\기말 프로젝트\-sign_language\sentence_degree\outputs\sentence_degree_eval_results.csv
+- C:\Users\soma\Desktop\기말 프로젝트\-sign_language\sentence_degree\outputs\sentence_degree_eval_metrics.json
+- C:\Users\soma\Desktop\기말 프로젝트\-sign_language\sentence_degree\outputs\sentence_degree_eval_report.txt
+- C:\Users\soma\Desktop\기말 프로젝트\-sign_language\sentence_degree\outputs\sentence_degree_fail_cases.csv

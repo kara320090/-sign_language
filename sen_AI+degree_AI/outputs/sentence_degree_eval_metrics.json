@@ -1,0 +1,15 @@
+{
+  "total": 30,
+  "pass": 30,
+  "fail": 0,
+  "postprocess_accuracy": 1.0,
+  "ollama_final_accept_rate": 0.9,
+  "rule_guard_rate": 0.1,
+  "fallback_rate": 0.0,
+  "rule_rate": 0.0,
+  "avg_latency_ms": 3007.08,
+  "source_counts": {
+    "ollama": 27,
+    "rule_guard": 3
+  }
+}

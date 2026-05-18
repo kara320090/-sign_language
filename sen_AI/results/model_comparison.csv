@@ -1,0 +1,4 @@
+﻿model,split,loss,accuracy,keras_accuracy,top3_accuracy,macro_f1,weighted_f1,num_samples,note,latency_avg_ms,latency_p50_ms,latency_p95_ms,latency_p99_ms,latency_repeats
+lstm,validation,0.336749136,0.899604518,0.899604499,0.987200916,0.57138723,0.900895228,101648,internal 20 percent split from current npy data,73.366157,73.02780001,92.29774,101.724844,200
+gru,validation,0.363425434,0.891114434,0.891114414,0.983895421,0.558494722,0.891955201,101648,internal 20 percent split from current npy data,82.169319,79.03519997,112.28163,145.228445,200
+cnn,validation,0.319996089,0.913977648,0.913977623,0.992857695,0.738913017,0.913942111,101648,internal 20 percent split from current npy data,59.277391,57.08954998,71.98099501,93.918403,200
