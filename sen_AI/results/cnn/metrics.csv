@@ -1,0 +1,2 @@
+﻿split,loss,accuracy,keras_accuracy,top3_accuracy,macro_f1,weighted_f1,num_samples,note,latency_avg_ms,latency_p50_ms,latency_p95_ms,latency_p99_ms,latency_repeats
+validation,0.31999608874320984,0.9139776483551079,0.9139776229858398,0.9928576946258545,0.7389130165791156,0.9139421109422217,101648,internal 20 percent split from current npy data,59.27739099919563,57.08954998408444,71.98099500674287,93.91840300348106,200
