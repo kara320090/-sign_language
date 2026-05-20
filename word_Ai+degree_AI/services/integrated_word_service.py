@@ -11,16 +11,28 @@ PROJECT_ROOT = CURRENT_DIR.parent.parent       # .../99. 깃헙 코드 -sign_lan
 WORD_SERVICES_DIR = PROJECT_ROOT / "word_AI" / "Final_Model_GRU" / "services"
 
 # 파이썬 주소록에 등록 (services 폴더명 충돌 방지용)
+# 현재 폴더(semantic_word_postprocessor 위치) 를 먼저 등록해야 import 성공
+if str(CURRENT_DIR) not in sys.path:
+    sys.path.insert(0, str(CURRENT_DIR))
 if str(WORD_SERVICES_DIR) not in sys.path:
-    sys.path.insert(0, str(WORD_SERVICES_DIR))
+    sys.path.insert(1, str(WORD_SERVICES_DIR))
 
 # 부품 소스코드 임포트
 try:
     from word_service import GRUWordInference
-    from semantic_word_postprocessor import SemanticWordPostprocessor
+    print(f"✓ word_service (GRUWordInference) 임포트 성공")
 except ImportError as e:
-    print(f"❌ 소스코드 임포트 실패! 폴더명이 정확한지 확인하세요.")
-    print(f"🔎 시스템이 찾으려고 시도한 주소: {WORD_SERVICES_DIR}")
+    print(f"❌ word_service 임포트 실패: {e}")
+    sys.exit(1)
+
+try:
+    from semantic_word_postprocessor import SemanticWordPostprocessor
+    print(f"✓ semantic_word_postprocessor 임포트 성공")
+except ImportError as e:
+    print(f"❌ semantic_word_postprocessor 임포트 실패: {e}")
+    print(f"🔎 현재 sys.path:")
+    for p in sys.path:
+        print(f"   - {p}")
     sys.exit(1)
 
 class IntegratedWordService:
@@ -92,6 +104,76 @@ class IntegratedWordService:
             }
         
         return {"status": "processing", "message": "데이터 축적 중이거나 확신도가 낮음"}
+
+    def process_sequence(self, full_landmarks_sequence: list):
+        """
+        Offline prediction for an entire sequence of frames (each frame is a 411D vector).
+        This resamples the sequence to the model `seq_len` and runs a single prediction.
+        Returns the same payload structure as `process_realtime` when status=='success'.
+        """
+        import numpy as _np
+
+        # Build hands (126D) sequence from full 411D features
+        hands = []
+        for f in full_landmarks_sequence:
+            arr = _np.asarray(f, dtype=_np.float32).flatten()
+            if arr.size != 411:
+                continue
+            hands.append(arr[75:201])
+
+        if not hands:
+            return {"status": "no_data", "message": "empty or invalid frames"}
+
+        seq_arr = _np.vstack(hands)
+
+        # resize sequence to expected seq_len
+        def _resize_sequence(a: _np.ndarray, seq_len: int):
+            cur = len(a)
+            if cur == seq_len:
+                return a
+            if cur > seq_len:
+                idx = _np.linspace(0, cur - 1, seq_len).astype(int)
+                return a[idx]
+            pad = _np.zeros((seq_len - cur, a.shape[1]), dtype=_np.float32)
+            return _np.vstack([a, pad])
+
+        seq_len = self.word_engine.seq_len
+        input_seq = _resize_sequence(seq_arr, seq_len)
+
+        # model predict
+        pred = self.word_engine.model.predict(_np.expand_dims(input_seq, axis=0), verbose=0)[0]
+        idx = int(_np.argmax(pred))
+        confidence = float(_np.max(pred))
+
+        if confidence < self.word_engine.threshold:
+            return {
+                "text": "인식불가",
+                "confidence": confidence,
+                "word_id": None,
+                "status": "low_confidence",
+            }
+
+        word_id = self.word_engine.idx_to_id.get(str(idx), "UNKNOWN")
+        korean_text = self.word_engine.id_to_korean.get(word_id, word_id)
+
+        # degree prediction using first 280 dims of first frame
+        import numpy as np
+        degree_input = np.asarray(full_landmarks_sequence[0][:280]).reshape(1, -1)
+        degree_pred = self.degree_model.predict(degree_input)[0]
+        degree_map = {0: "약함", 1: "보통", 2: "강함"}
+        real_degree_ko = degree_map.get(int(degree_pred), "보통")
+
+        final_output = self.llm_engine.process(korean_text, real_degree_ko)
+
+        return {
+            "status": "success",
+            "original_word": korean_text,
+            "confidence": confidence,
+            "predicted_degree": real_degree_ko,
+            "final_sentence": final_output["final_text"],
+            "modifier": final_output.get("modifier", ""),
+            "reason": final_output.get("reason", ""),
+        }
 
 if __name__ == "__main__":
     base_model_path = PROJECT_ROOT / "word_AI" / "Final_Model_GRU" / "artifacts" / "Final_GRU_HANDS_126D" / "models"
