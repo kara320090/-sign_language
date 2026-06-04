@@ -52,7 +52,22 @@ def get_degree_model():
             f"{searched}"
         )
 
-    _degree_model = joblib.load(model_path)
+    loaded = joblib.load(model_path)
+
+    # joblib 파일이 dict 형태로 저장된 경우 내부 모델을 꺼낸다.
+    if isinstance(loaded, dict):
+        for key in ["model", "clf", "classifier", "mlp", "best_model", "estimator"]:
+            if key in loaded and hasattr(loaded[key], "predict"):
+                loaded = loaded[key]
+                break
+
+    if not hasattr(loaded, "predict"):
+        raise TypeError(
+            f"degree joblib에서 predict 가능한 모델을 찾지 못했습니다. "
+            f"로드된 타입: {type(loaded)}"
+        )
+
+    _degree_model = loaded
     _degree_model_path = model_path
 
     return _degree_model

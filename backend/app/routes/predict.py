@@ -49,7 +49,7 @@ async def predict_upload(
                 detail="업로드된 파일이 없습니다."
             )
 
-        allowed_ext = [".mp4", ".avi", ".mov", ".mkv"]
+        allowed_ext = [".mp4", ".avi", ".mov", ".mkv", ".webm"]
         ext = os.path.splitext(file.filename)[1].lower()
 
         if ext not in allowed_ext:

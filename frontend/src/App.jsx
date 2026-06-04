@@ -144,7 +144,7 @@ export default function App() {
   }, [webcam.videoRef]);
 
   const handleAutoWebcamAnalysis = useCallback(async () => {
-    const imageBlob = await captureWebcamFrame();
+    const videoBlob = await recordWebcamVideo(stream, 3000);
     runWebcamAnalysis(outputMode, imageBlob);
   }, [captureWebcamFrame, outputMode, runWebcamAnalysis]);
 

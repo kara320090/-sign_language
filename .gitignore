@@ -1,49 +1,36 @@
+# Python virtual environments
 .venv/
-__pycache__/
-*.pyc
+.venv_mp/
+backend/.venv/
+backend/.venv_mp/
+**/.venv/
+**/.venv_mp/
 
-degree_AI/data/raw/*
-degree_AI/data/work/*
-degree_AI/data/processed/*
-degree_AI/models/*
-degree_AI/outputs/*
-
-!degree_AI/data/raw/.gitkeep
-!degree_AI/data/work/.gitkeep
-!degree_AI/data/processed/.gitkeep
-!degree_AI/models/.gitkeep
-
-*.npy
-*.npz
-*.pkl
-*.h5
-*.pt
-*.pth
-*.onnx
-
-*.zip
-*.rar
-*.7z
-*.mat
-*.xls
-*.xlsx
-*.mp4
-*.wmv
-
-*.log
-
-# Node
+# Node modules
 node_modules/
 frontend/node_modules/
 
-# Python
-.venv/
-backend/.venv/
+# Python cache
 __pycache__/
+**/__pycache__/
 *.pyc
+*.pyo
+*.pyd
 
 # Runtime files
-uploads/
 backend/uploads/
-results/
 backend/results/
+uploads/
+results/
+
+# AI model / data files
+*.keras
+*.h5
+*.joblib
+*.pkl
+*.npy
+
+# Temporary folders
+temp_sentence_models/
+temp_degree_models/
+tmp_zips/

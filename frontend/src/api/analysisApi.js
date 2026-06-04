@@ -87,9 +87,31 @@ export async function analyzeUpload({ file, outputMode }) {
   return mapBackendResultToFrontendResult(data, outputMode, "upload");
 }
 
-export async function analyzeWebcam({ imageBlob, outputMode }) {
+export async function analyzeWebcam({ videoBlob, imageBlob, outputMode }) {
+  // 우선순위: 녹화된 영상 Blob 사용
+  if (videoBlob) {
+    const formData = new FormData();
+
+    formData.append("file", videoBlob, "webcam-recording.webm");
+    formData.append("mode", getBackendMode(outputMode));
+    formData.append("output_mode", outputMode);
+
+    const response = await fetch(`${API_BASE_URL}/api/predict/upload`, {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || data.status === "error") {
+      throw new Error(data.detail ?? data.message ?? "웹캠 영상 분석에 실패했습니다.");
+    }
+
+    return mapBackendResultToFrontendResult(data, outputMode, "webcam");
+  }
+
+  // 기존 이미지 캡처 방식은 fallback으로 유지
   if (!imageBlob) {
-    // 웹캠 캡처가 실패했을 때만 임시 mock으로 fallback
     return createMockAnalysisResult(outputMode, "webcam");
   }
 

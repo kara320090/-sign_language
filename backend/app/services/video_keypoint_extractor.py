@@ -1,9 +1,22 @@
 import cv2
 import numpy as np
 from functools import lru_cache
+import os
+import subprocess
+import tempfile
+from pathlib import Path
+
+_LAST_EXTRACTOR_STATUS = {
+    "method": "unknown",
+    "error": ""
+}
 
 
 def _landmarks_to_xyc(landmarks, target_count: int):
+    """
+    MediaPipe landmark를 [x, y, confidence] 형태로 변환한다.
+    없으면 0으로 채우고, 많으면 앞 target_count개만 사용한다.
+    """
     result = []
 
     if landmarks is None:
@@ -25,12 +38,20 @@ def _landmarks_to_xyc(landmarks, target_count: int):
 
 def _make_411d_from_mediapipe_results(results):
     """
-    411D 구성:
+    공통 411D keypoint 구성.
+
+    현재 구성:
     pose 25점 * 3 = 75
     left hand 21점 * 3 = 63
     right hand 21점 * 3 = 63
     face 70점 * 3 = 210
-    총 411
+
+    total = 75 + 63 + 63 + 210 = 411
+
+    이 순서를 기준으로:
+    - word_AI는 75:201 구간을 사용하여 30F x 126D hands 입력 생성
+    - sentence_AI는 hands + pose 일부를 사용하여 30F x 120D 입력 생성
+    - degree_AI는 201:411 face 구간을 사용하여 1F x 280D 입력 생성
     """
     pose = _landmarks_to_xyc(results.pose_landmarks, 25)
     left_hand = _landmarks_to_xyc(results.left_hand_landmarks, 21)
@@ -63,6 +84,9 @@ def _load_mediapipe_holistic():
 
 
 def _extract_with_mediapipe(video_path: str, target_frames: int = 30):
+    """
+    MediaPipe Holistic으로 실제 pose/hand/face keypoint를 추출한다.
+    """
     mp_holistic = _load_mediapipe_holistic()
 
     if mp_holistic is None:
@@ -122,13 +146,14 @@ def _extract_with_mediapipe(video_path: str, target_frames: int = 30):
 def _extract_video_dependent_fallback(video_path: str, target_frames: int = 30):
     """
     MediaPipe가 현재 환경에서 작동하지 않을 때 사용하는 안전 fallback.
-    실제 landmark는 아니지만, 업로드된 영상 프레임의 밝기/움직임 정보를 이용해
+
+    실제 landmark는 아니지만, 업로드된 영상 프레임의 밝기/대비/움직임 정보를 이용해
     30F x 411D 형태를 생성한다.
 
     목적:
     - 서버가 죽지 않게 함
-    - 프론트-백엔드-영상처리 흐름을 유지함
-    - degree 추정이 영상마다 조금 달라지게 함
+    - 프론트-백엔드-영상처리 흐름 유지
+    - 모델 입력 shape 유지
     """
     cap = cv2.VideoCapture(video_path)
 
@@ -168,7 +193,6 @@ def _extract_video_dependent_fallback(video_path: str, target_frames: int = 30):
 
             prev_small = gray
 
-            # 영상 기반으로 411D pseudo sequence 생성
             base = np.zeros(411, dtype=np.float32)
 
             # pose 영역 0:75
@@ -199,31 +223,71 @@ def _extract_video_dependent_fallback(video_path: str, target_frames: int = 30):
     return sequence[:target_frames]
 
 
+_LAST_EXTRACTOR_STATUS = {
+    "method": "unknown",
+    "error": ""
+}
+
+
 @lru_cache(maxsize=16)
 def extract_411d_sequence_from_video(video_path: str, target_frames: int = 30):
     """
-    mp4/avi/mov/mkv 영상에서 30F x 411D sequence를 추출한다.
+    mp4/avi/mov/mkv/webm 영상에서 30F x 411D sequence를 추출한다.
 
-    1순위: MediaPipe Holistic 사용
-    2순위: MediaPipe 불가 시 OpenCV 기반 fallback 사용
+    1순위: 현재 backend .venv의 MediaPipe
+    2순위: 별도 .venv_mp의 MediaPipe worker
+    3순위: OpenCV fallback
     """
-    try:
-        return _extract_with_mediapipe(video_path, target_frames)
+    global _LAST_EXTRACTOR_STATUS
 
-    except Exception:
-        return _extract_video_dependent_fallback(video_path, target_frames)
+    try:
+        sequence = _extract_with_mediapipe(video_path, target_frames)
+        _LAST_EXTRACTOR_STATUS = {
+            "method": "mediapipe_in_backend_venv",
+            "error": ""
+        }
+        return sequence
+
+    except Exception as first_error:
+        try:
+            sequence = _extract_with_external_mediapipe_worker(video_path, target_frames)
+            _LAST_EXTRACTOR_STATUS = {
+                "method": "mediapipe_external_worker",
+                "error": ""
+            }
+            return sequence
+
+        except Exception as second_error:
+            sequence = _extract_video_dependent_fallback(video_path, target_frames)
+            _LAST_EXTRACTOR_STATUS = {
+                "method": "opencv_fallback",
+                "error": (
+                    f"backend mediapipe error: {first_error}; "
+                    f"external worker error: {second_error}"
+                )
+            }
+            return sequence
+
+
+def get_last_extractor_status():
+    return _LAST_EXTRACTOR_STATUS
 
 
 def summarize_keypoint_sequence(sequence):
+    """
+    추출된 411D sequence의 상태 요약.
+    Swagger/프론트 디버깅용.
+    """
     if not sequence:
         return {
-            "sequence_length": 0,
-            "frame_dim": 0,
-            "has_pose": False,
-            "has_left_hand": False,
-            "has_right_hand": False,
-            "has_face": False,
-        }
+    "sequence_length": int(arr.shape[0]),
+    "frame_dim": int(arr.shape[1]),
+    "has_pose": bool(np.any(pose)),
+    "has_left_hand": bool(np.any(left)),
+    "has_right_hand": bool(np.any(right)),
+    "has_face": bool(np.any(face)),
+    "extractor_status": get_last_extractor_status(),
+}
 
     arr = np.asarray(sequence, dtype=np.float32)
 
@@ -239,4 +303,203 @@ def summarize_keypoint_sequence(sequence):
         "has_left_hand": bool(np.any(left)),
         "has_right_hand": bool(np.any(right)),
         "has_face": bool(np.any(face)),
+        "extractor_status": get_last_extractor_status(),
     }
+
+
+def extract_hands_126_from_411d(sequence_411d):
+    """
+    word_AI 보고서 기준 입력:
+    30F x 126D hands keypoint
+
+    현재 411D 구성:
+    pose 0:75
+    left hand 75:138
+    right hand 138:201
+    face 201:411
+
+    hands 126D = left hand 63D + right hand 63D
+    """
+    arr = np.asarray(sequence_411d, dtype=np.float32)
+
+    if arr.ndim != 2 or arr.shape[1] != 411:
+        raise ValueError(f"411D sequence shape 오류: {arr.shape}")
+
+    hands_126 = arr[:, 75:201].astype(np.float32)
+
+    if hands_126.shape != (30, 126):
+        raise ValueError(f"word_AI 입력 shape 오류: {hands_126.shape}, expected (30, 126)")
+
+    return hands_126
+
+
+def extract_sentence_120_from_411d(sequence_411d):
+    """
+    sentence_AI 입력용 30F x 120D sequence 생성.
+
+    구성:
+    left hand 21점 x,y = 42
+    right hand 21점 x,y = 42
+    pose 18점 x,y = 36
+
+    total = 120D
+    """
+    arr = np.asarray(sequence_411d, dtype=np.float32)
+
+    if arr.ndim != 2 or arr.shape[1] != 411:
+        raise ValueError(f"411D sequence shape 오류: {arr.shape}")
+
+    pose_75 = arr[:, 0:75].reshape(arr.shape[0], 25, 3)
+    left_63 = arr[:, 75:138].reshape(arr.shape[0], 21, 3)
+    right_63 = arr[:, 138:201].reshape(arr.shape[0], 21, 3)
+
+    left_xy = left_63[:, :, :2].reshape(arr.shape[0], 42)
+    right_xy = right_63[:, :, :2].reshape(arr.shape[0], 42)
+    pose18_xy = pose_75[:, :18, :2].reshape(arr.shape[0], 36)
+
+    sentence_120 = np.concatenate(
+        [left_xy, right_xy, pose18_xy],
+        axis=1
+    ).astype(np.float32)
+
+    if sentence_120.shape != (30, 120):
+        raise ValueError(f"sentence_AI 입력 shape 오류: {sentence_120.shape}, expected (30, 120)")
+
+    return sentence_120
+
+
+def extract_degree_280_from_411d(sequence_411d):
+    """
+    degree_AI 보고서 기준 입력:
+    1F x 280D
+
+    구성:
+    16D 얼굴 요약 feature
+    + 132D 정규화 얼굴 landmark
+    + 132D delta feature
+    = 280D
+
+    현재 411D의 face 영역:
+    face 201:411
+    70점 x (x, y, confidence) = 210D
+
+    이 중 앞 66개 얼굴점의 x, y를 사용해 132D를 만든다.
+    """
+    arr = np.asarray(sequence_411d, dtype=np.float32)
+
+    if arr.ndim != 2 or arr.shape[1] != 411:
+        raise ValueError(f"411D sequence shape 오류: {arr.shape}")
+
+    face = arr[:, 201:411].reshape(arr.shape[0], 70, 3)
+    face_xy = face[:, :66, :2]
+
+    face_conf = face[:, :, 2]
+    has_face = bool(np.any(face_conf > 0))
+
+    # 대표 프레임: 중앙 프레임
+    mid_idx = len(face_xy) // 2
+    current_xy = face_xy[mid_idx]
+
+    # 기준 프레임: 첫 프레임
+    base_xy = face_xy[0]
+
+    # 현재 프레임 정규화
+    center = np.mean(current_xy, axis=0)
+    centered = current_xy - center
+
+    scale = np.std(centered)
+    if scale < 1e-6:
+        scale = 1.0
+
+    norm_xy = centered / scale
+    norm_132 = norm_xy.reshape(-1)
+
+    # 기준 프레임 정규화
+    base_center = np.mean(base_xy, axis=0)
+    base_centered = base_xy - base_center
+
+    base_scale = np.std(base_centered)
+    if base_scale < 1e-6:
+        base_scale = 1.0
+
+    base_norm = base_centered / base_scale
+
+    # delta feature
+    delta_xy = norm_xy - base_norm
+    delta_132 = delta_xy.reshape(-1)
+
+    # 16D summary feature
+    x = norm_xy[:, 0]
+    y = norm_xy[:, 1]
+    dx = delta_xy[:, 0]
+    dy = delta_xy[:, 1]
+
+    summary_16 = np.array([
+        np.mean(x),
+        np.std(x),
+        np.min(x),
+        np.max(x),
+        np.mean(y),
+        np.std(y),
+        np.min(y),
+        np.max(y),
+        np.mean(dx),
+        np.std(dx),
+        np.min(dx),
+        np.max(dx),
+        np.mean(dy),
+        np.std(dy),
+        np.min(dy),
+        np.max(dy),
+    ], dtype=np.float32)
+
+    degree_280 = np.concatenate([
+        summary_16,
+        norm_132.astype(np.float32),
+        delta_132.astype(np.float32),
+    ]).astype(np.float32)
+
+    if degree_280.shape[0] != 280:
+        raise ValueError(f"degree_AI 입력 shape 오류: {degree_280.shape}, expected (280,)")
+
+    return degree_280, has_face
+
+def _extract_with_external_mediapipe_worker(video_path: str, target_frames: int = 30):
+    project_backend = Path(__file__).resolve().parents[2]
+    worker_python = project_backend / ".venv_mp" / "Scripts" / "python.exe"
+    worker_script = project_backend / "app" / "services" / "mp_extract_worker.py"
+
+    if not worker_python.exists():
+        raise FileNotFoundError(f"MediaPipe worker python not found: {worker_python}")
+
+    if not worker_script.exists():
+        raise FileNotFoundError(f"MediaPipe worker script not found: {worker_script}")
+
+    with tempfile.NamedTemporaryFile(suffix=".npy", delete=False) as tmp:
+        output_path = tmp.name
+
+    try:
+        completed = subprocess.run(
+            [str(worker_python), str(worker_script), video_path, output_path],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+
+        if completed.returncode != 0:
+            raise RuntimeError(
+                f"MediaPipe worker failed\nSTDOUT:\n{completed.stdout}\nSTDERR:\n{completed.stderr}"
+            )
+
+        arr = np.load(output_path).astype(np.float32)
+
+        if arr.shape != (target_frames, 411):
+            raise ValueError(f"worker output shape error: {arr.shape}")
+
+        return arr.tolist()
+
+    finally:
+        try:
+            os.remove(output_path)
+        except OSError:
+            pass

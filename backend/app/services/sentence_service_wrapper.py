@@ -102,11 +102,18 @@ def _predict_sentence(sequence_120):
         })
 
     best = top_k[0]
+    status = "success"
+
+    # __BLANK__가 1순위이면 실제 표시용 결과는 다음 후보를 사용
+    if best["text"] == "__BLANK__" and len(top_k) > 1:
+        best = top_k[1]
+        status = "blank_adjusted"
 
     return {
         "text": best["text"],
         "confidence": best["confidence"],
         "label": best["label"],
+        "status": status,
         "top_k": top_k,
     }
 
@@ -133,7 +140,7 @@ def predict_sentence(video_path: str) -> dict:
             "text": result["text"],
             "confidence": float(result["confidence"]),
             "label": result["label"],
-            "status": "success",
+            "status": result.get("status", "success"),
             "top_k": result["top_k"],
             "model_status": "sentence_ai_model_connected",
             "model_path": str(_sentence_model_path),
