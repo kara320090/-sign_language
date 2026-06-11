@@ -55,10 +55,6 @@ function getDisplayConfidence(result, outputMode) {
   return 0.8 + stableRatio(seed) * 0.1;
 }
 
-function shouldShowDemoResult(result, outputMode) {
-  return result?.source === "webcam" && outputMode === OUTPUT_MODES.WORD_DEGREE;
-}
-
 function EmptyState({ status, errorMessage }) {
   const messages = {
     [ANALYSIS_STATUS.IDLE]: ["대기 중", "수어 인식을 준비하고 있습니다."],
@@ -101,22 +97,20 @@ export function ResultPanel({ status, result, outputMode, errorMessage }) {
     );
   }
 
-  const demoResult = shouldShowDemoResult(result, outputMode);
-  const primaryText = demoResult ? "고민" : getPrimaryText(result, outputMode);
-  const degree = getDegreeLabel(demoResult ? "normal" : result.degree);
+  const primaryText = getPrimaryText(result, outputMode);
+  const degree = getDegreeLabel(result.degree);
   const confidenceAdjusted = shouldAdjustConfidence(result, outputMode);
-  const confidence = demoResult ? "84%" : formatConfidence(getDisplayConfidence(result, outputMode));
+  const confidence = formatConfidence(getDisplayConfidence(result, outputMode));
   const showDegree = shouldShowDegree(outputMode);
 
   return (
     <aside className="result-panel" aria-label="분석 결과">
       <div className="result-main">
-        {demoResult && <span className="fallback-badge"></span>}
         {status === ANALYSIS_STATUS.LLM_FALLBACK && <span className="fallback-badge">LLM fallback</span>}
         <h2>{primaryText}</h2>
         {showDegree && (
           <div className={`degree-badge ${degree}`}>
-            {demoResult ? "보통" : result.degreeText ?? degree}
+            {result.degreeText ?? degree}
           </div>
         )}
         <div className="result-meta">

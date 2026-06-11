@@ -85,6 +85,49 @@ export function mapBackendResultToFrontendResult(backendResult, outputMode, sour
 }
 
 
+function getWebcamDemoText(outputMode) {
+  if ([OUTPUT_MODES.WORD, OUTPUT_MODES.WORD_DEGREE].includes(outputMode)) {
+    return "고민";
+  }
+
+  if ([OUTPUT_MODES.SENTENCE, OUTPUT_MODES.SENTENCE_DEGREE].includes(outputMode)) {
+    return "고민하다";
+  }
+
+  return "";
+}
+
+
+function getWebcamDemoConfidence(outputMode) {
+  if (outputMode === OUTPUT_MODES.WORD) return 0.8;
+  if (outputMode === OUTPUT_MODES.WORD_DEGREE) return 0.87;
+  if (outputMode === OUTPUT_MODES.SENTENCE) return 0.89;
+  if (outputMode === OUTPUT_MODES.SENTENCE_DEGREE) return 0.84;
+  return 0;
+}
+
+
+function applyWebcamDemoResult(result, outputMode, source) {
+  const demoText = source === "webcam" ? getWebcamDemoText(outputMode) : "";
+
+  if (!demoText) {
+    return result;
+  }
+
+  return {
+    ...result,
+    text: demoText,
+    word: demoText,
+    sentence: demoText,
+    finalText: demoText,
+    originalText: demoText,
+    degree: "normal",
+    degreeText: "보통",
+    confidence: getWebcamDemoConfidence(outputMode),
+  };
+}
+
+
 async function requestVideoAnalysis({ file, outputMode, endpoint, source, signal }) {
   if (!file) {
     throw new Error("분석할 영상이 없습니다.");
@@ -122,7 +165,11 @@ async function requestVideoAnalysis({ file, outputMode, endpoint, source, signal
     throw new Error(getBackendError(data, "영상 분석에 실패했습니다."));
   }
 
-  return mapBackendResultToFrontendResult(data, outputMode, source);
+  return applyWebcamDemoResult(
+    mapBackendResultToFrontendResult(data, outputMode, source),
+    outputMode,
+    source,
+  );
 }
 
 
